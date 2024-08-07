@@ -16,7 +16,17 @@ pub type Attribute {
 }
 
 pub fn get_first_element(in: String) -> #(Element, String) {
-  do_get_first_element(in, "", True)
+  in
+  |> trim_space_to_elem_begin
+  |> do_get_first_element("", True)
+}
+
+fn trim_space_to_elem_begin(in: String) -> String {
+  case in {
+    " " <> remain -> trim_space_to_elem_begin(remain)
+    "<" <> remain -> "<" <> remain
+    _ -> in
+  }
 }
 
 fn do_get_first_element(
@@ -32,7 +42,7 @@ fn do_get_first_element(
         True -> #(StartElement(out, []), remain)
         False -> #(EndElement(out), remain)
       }
-    " " <> remain -> do_get_first_element(remain, out, start)
+    " " <> remain if start -> #(StartElement(out, get_attrs(remain)), "")
     "" -> #(EmptyElement, in)
     _ -> {
       let assert Ok(#(head, remain)) = string.pop_grapheme(in)
@@ -42,7 +52,9 @@ fn do_get_first_element(
 }
 
 pub fn get_attrs(in: String) -> List(Attribute) {
-  do_get_attrs(in, "", "", False)
+  in
+  |> trim_space_to_elem_begin
+  |> do_get_attrs("", "", False)
 }
 
 fn do_get_attrs(
@@ -52,7 +64,11 @@ fn do_get_attrs(
   finding_value: Bool,
 ) -> List(Attribute) {
   case in {
-    "" | ">" -> [Attribute(key, val)]
+    "" | ">" ->
+      case key, val {
+        "", "" -> []
+        _, _ -> [Attribute(key, val)]
+      }
     " " <> remain if !finding_value ->
       do_get_attrs(remain, key, val, finding_value)
     " " <> remain -> [

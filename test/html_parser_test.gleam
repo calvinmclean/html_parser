@@ -28,6 +28,21 @@ pub fn get_first_element_test() {
       html_parser.StartElement("div", []),
       "  <div>",
     )),
+    #("div with attribute", "<div a=b>", #(
+      html_parser.StartElement("div", [html_parser.Attribute("a", "b")]),
+      "",
+    )),
+    #("div with attribute and too many spaces", "<div     a=b >", #(
+      html_parser.StartElement("div", [html_parser.Attribute("a", "b")]),
+      "",
+    )),
+    #("div with multiple attribute", "<div a=b c=d>", #(
+      html_parser.StartElement("div", [
+        html_parser.Attribute("a", "b"),
+        html_parser.Attribute("c", "d"),
+      ]),
+      "",
+    )),
   ]
 
   list.each(tests, fn(testcase) {
@@ -38,7 +53,7 @@ pub fn get_first_element_test() {
 
 pub fn get_attrs_test() {
   let tests = [
-    #("empty string", "", [html_parser.Attribute("", "")]),
+    #("empty string", "", []),
     #("single simple attr", "a=b", [html_parser.Attribute("a", "b")]),
     #("surrounding spaces", "     a=b", [html_parser.Attribute("a", "b")]),
     #("single larger attr", "aaaaaaa=bbbbbb", [
