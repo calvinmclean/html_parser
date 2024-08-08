@@ -23,7 +23,8 @@ pub fn get_first_element(in: String) -> #(Element, String) {
 
 fn trim_space_to_elem_begin(in: String) -> String {
   case in {
-    " " <> remain -> trim_space_to_elem_begin(remain)
+    " " <> remain | "\n" <> remain | "\t" <> remain ->
+      trim_space_to_elem_begin(remain)
     "<" <> remain -> "<" <> remain
     _ -> in
   }
@@ -108,4 +109,14 @@ fn remove_quotes(in: String) -> String {
   |> string.reverse
   |> remove_first_quote
   |> string.reverse
+}
+
+pub fn as_list(in: String) -> List(Element) {
+  case in {
+    "" -> []
+    _ -> {
+      let #(first, remain) = get_first_element(in)
+      [first, ..as_list(remain)]
+    }
+  }
 }

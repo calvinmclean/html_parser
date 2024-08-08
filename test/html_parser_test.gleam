@@ -89,3 +89,24 @@ pub fn get_attrs_test() {
     html_parser.get_attrs(in) |> should.equal(expected)
   })
 }
+
+pub fn as_list_test() {
+  let tests = [
+    #("empty string", "", []),
+    #("single start element", "<div>", [html_parser.StartElement("div", [])]),
+    #("start and end element", "<div> \n \t </div>", [
+      html_parser.StartElement("div", []),
+      html_parser.EndElement("div"),
+    ]),
+    #("nested elements", "<div><p></p></div>", [
+      html_parser.StartElement("div", []),
+      html_parser.StartElement("p", []),
+      html_parser.EndElement("p"),
+      html_parser.EndElement("div"),
+    ]),
+  ]
+  list.each(tests, fn(testcase) {
+    let #(_name, in, expected) = testcase
+    html_parser.as_list(in) |> should.equal(expected)
+  })
+}
