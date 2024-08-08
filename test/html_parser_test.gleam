@@ -20,7 +20,7 @@ pub fn get_first_element_test() {
       html_parser.StartElement("div", []),
       "",
     )),
-    #("div with internal spaces", "<div  >", #(
+    #("div with internal spaces", "<div \t \n  >", #(
       html_parser.StartElement("div", []),
       "",
     )),
@@ -28,15 +28,15 @@ pub fn get_first_element_test() {
       html_parser.StartElement("div", []),
       "  <div>",
     )),
-    #("div with attribute", "<div a=b>", #(
+    #("div with attribute", "<div\n a=\"b\">", #(
       html_parser.StartElement("div", [html_parser.Attribute("a", "b")]),
       "",
     )),
-    #("div with attribute and too many spaces", "<div     a=b >", #(
+    #("div with attribute and too many spaces", "<div     a=\"b\" >", #(
       html_parser.StartElement("div", [html_parser.Attribute("a", "b")]),
       "",
     )),
-    #("div with multiple attribute", "<div a=b c=d>", #(
+    #("div with multiple attribute", "<div a=\"b\" c=\"d\">", #(
       html_parser.StartElement("div", [
         html_parser.Attribute("a", "b"),
         html_parser.Attribute("c", "d"),
@@ -53,21 +53,35 @@ pub fn get_first_element_test() {
 
 pub fn get_attrs_test() {
   let tests = [
-    #("empty string", "", []),
-    #("single simple attr", "a=b", [html_parser.Attribute("a", "b")]),
-    #("surrounding spaces", "     a=b", [html_parser.Attribute("a", "b")]),
-    #("single larger attr", "aaaaaaa=bbbbbb", [
-      html_parser.Attribute("aaaaaaa", "bbbbbb"),
-    ]),
-    #("multiple simple attr", "a=b c=d e=f", [
-      html_parser.Attribute("a", "b"),
-      html_parser.Attribute("c", "d"),
-      html_parser.Attribute("e", "f"),
-    ]),
-    #("multiple larger attr", "aaaaaaa=bbbbbb ccc=dddd", [
-      html_parser.Attribute("aaaaaaa", "bbbbbb"),
-      html_parser.Attribute("ccc", "dddd"),
-    ]),
+    #("empty string", "", #([], "")),
+    #("single simple attr", "a=\"b\"", #([html_parser.Attribute("a", "b")], "")),
+    #("surrounding spaces", "     a=\"b\"", #(
+      [html_parser.Attribute("a", "b")],
+      "",
+    )),
+    #("single larger attr", "aaaaaaa=\"bbbbbb\"", #(
+      [html_parser.Attribute("aaaaaaa", "bbbbbb")],
+      "",
+    )),
+    #("multiple simple attr", "a=\"b\" \t c=\"d\" e=\"f\"", #(
+      [
+        html_parser.Attribute("a", "b"),
+        html_parser.Attribute("c", "d"),
+        html_parser.Attribute("e", "f"),
+      ],
+      "",
+    )),
+    #("multiple larger attr", "aaaaaaa=\"bbbbbb\" ccc=\"dddd\"", #(
+      [
+        html_parser.Attribute("aaaaaaa", "bbbbbb"),
+        html_parser.Attribute("ccc", "dddd"),
+      ],
+      "",
+    )),
+    #("attributes followed by more document", "a=\"b\" c=\"d\" > \n</div>", #(
+      [html_parser.Attribute("a", "b"), html_parser.Attribute("c", "d")],
+      " \n</div>",
+    )),
   ]
 
   list.each(tests, fn(testcase) {

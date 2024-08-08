@@ -32,26 +32,29 @@ fn trim_space_to_elem_begin(in: String) -> String {
 fn do_get_first_element(
   in: String,
   out: String,
-  start: Bool,
+  start_element: Bool,
 ) -> #(Element, String) {
   case in {
     "</" <> remain -> do_get_first_element(remain, out, False)
     "<" <> remain -> do_get_first_element(remain, out, True)
     ">" <> remain ->
-      case start {
+      case start_element {
         True -> #(StartElement(out, []), remain)
         False -> #(EndElement(out), remain)
       }
-    " " <> remain if start -> #(StartElement(out, get_attrs(remain)), "")
-    "" -> #(EmptyElement, in)
+    " " <> remain | "\n" <> remain | "\t" <> remain if start_element -> {
+      let #(attrs, remain_after_attr) = get_attrs(remain)
+      #(StartElement(out, attrs), remain_after_attr)
+    }
+    "" -> #(EmptyElement, "")
     _ -> {
       let assert Ok(#(head, remain)) = string.pop_grapheme(in)
-      do_get_first_element(remain, out <> head, start)
+      do_get_first_element(remain, out <> head, start_element)
     }
   }
 }
 
-pub fn get_attrs(in: String) -> List(Attribute) {
+pub fn get_attrs(in: String) -> #(List(Attribute), String) {
   in
   |> trim_space_to_elem_begin
   |> do_get_attrs("", "", False)
@@ -62,19 +65,25 @@ fn do_get_attrs(
   key: String,
   val: String,
   finding_value: Bool,
-) -> List(Attribute) {
+) -> #(List(Attribute), String) {
   case in {
     "" | ">" ->
       case key, val {
-        "", "" -> []
-        _, _ -> [Attribute(key, val)]
+        "", "" -> #([], "")
+        _, "" -> #([], key)
+        _, _ -> #([Attribute(key, remove_quotes(val))], "")
       }
-    " " <> remain if !finding_value ->
+    ">" <> remain ->
+      case key, val {
+        "", "" -> #([], remain)
+        _, _ -> #([Attribute(key, remove_quotes(val))], remain)
+      }
+    " " <> remain | "\n" <> remain | "\t" <> remain if !finding_value ->
       do_get_attrs(remain, key, val, finding_value)
-    " " <> remain -> [
-      Attribute(key, val),
-      ..do_get_attrs(remain, "", "", False)
-    ]
+    " " <> remain | "\n" <> remain | "\t" <> remain -> {
+      let #(attrs, remain_after_attr) = do_get_attrs(remain, "", "", False)
+      #([Attribute(key, remove_quotes(val)), ..attrs], remain_after_attr)
+    }
     "=" <> remain -> do_get_attrs(remain, key, "", True)
     _ -> {
       let assert Ok(#(head, remain)) = string.pop_grapheme(in)
@@ -84,4 +93,19 @@ fn do_get_attrs(
       }
     }
   }
+}
+
+fn remove_quotes(in: String) -> String {
+  let remove_first_quote = fn(str) {
+    case str {
+      "\"" <> remain -> remain
+      _ -> str
+    }
+  }
+
+  in
+  |> remove_first_quote
+  |> string.reverse
+  |> remove_first_quote
+  |> string.reverse
 }
