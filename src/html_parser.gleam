@@ -1,4 +1,5 @@
 import gleam/io
+import gleam/list
 import gleam/string
 
 pub fn main() {
@@ -7,7 +8,11 @@ pub fn main() {
 
 pub type Element {
   EmptyElement
-  StartElement(name: String, attributes: List(Attribute))
+  StartElement(
+    name: String,
+    attributes: List(Attribute),
+    children: List(Element),
+  )
   EndElement(name: String)
 }
 
@@ -40,12 +45,12 @@ fn do_get_first_element(
     "<" <> remain -> do_get_first_element(remain, out, True)
     ">" <> remain ->
       case start_element {
-        True -> #(StartElement(out, []), remain)
+        True -> #(StartElement(out, [], []), remain)
         False -> #(EndElement(out), remain)
       }
     " " <> remain | "\n" <> remain | "\t" <> remain if start_element -> {
       let #(attrs, remain_after_attr) = get_attrs(remain)
-      #(StartElement(out, attrs), remain_after_attr)
+      #(StartElement(out, attrs, []), remain_after_attr)
     }
     "" -> #(EmptyElement, "")
     _ -> {
@@ -117,6 +122,31 @@ pub fn as_list(in: String) -> List(Element) {
     _ -> {
       let #(first, remain) = get_first_element(in)
       [first, ..as_list(remain)]
+    }
+  }
+}
+
+pub fn as_tree(in: String) -> Element {
+  let #(first, remain) = get_first_element(in)
+  let #(result, _) = do_as_tree(remain, first)
+  result
+}
+
+pub fn do_as_tree(in: String, current: Element) -> #(Element, String) {
+  let #(next, remain) = get_first_element(in)
+  let assert StartElement(cur_name, cur_attrs, cur_children) = current
+  case next {
+    EndElement(name) if name == cur_name -> #(
+      StartElement(cur_name, cur_attrs, cur_children |> list.reverse),
+      remain,
+    )
+    EndElement(_) -> do_as_tree(remain, current)
+    _ -> {
+      let #(child_tree, remain_after_child) = do_as_tree(remain, next)
+      do_as_tree(
+        remain_after_child,
+        StartElement(cur_name, cur_attrs, [child_tree, ..cur_children]),
+      )
     }
   }
 }
