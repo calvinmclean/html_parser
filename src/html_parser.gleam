@@ -1,12 +1,5 @@
-import gleam/io
 import gleam/list
 import gleam/string
-import simplifile.{read}
-
-pub fn main() {
-  let assert Ok(input) = read(from: "aloha.html")
-  input |> as_list |> find_div |> io.debug
-}
 
 type CurrentElementType {
   Start

@@ -2,9 +2,39 @@ import gleam/list
 import gleeunit
 import gleeunit/should
 import html_parser
+import simplifile.{read}
 
 pub fn main() {
   gleeunit.main()
+}
+
+fn find_div(in: List(html_parser.Element)) -> html_parser.Element {
+  case in {
+    [] -> html_parser.EmptyElement
+    [
+      html_parser.StartElement(
+        "div",
+        [html_parser.Attribute("class", "definition")],
+        _,
+      ) as result,
+      ..
+    ] -> result
+    [_, ..tail] -> find_div(tail)
+  }
+}
+
+pub fn parse_aloha_test() {
+  let assert Ok(input) = read(from: "test/aloha.html")
+  input
+  |> html_parser.as_list
+  |> find_div
+  |> should.equal(
+    html_parser.StartElement(
+      "div",
+      [html_parser.Attribute("class", "definition")],
+      [],
+    ),
+  )
 }
 
 pub fn get_first_element_test() {
