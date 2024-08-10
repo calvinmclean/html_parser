@@ -1,9 +1,26 @@
 import gleam/io
 import gleam/list
 import gleam/string
+import simplifile.{read}
 
 pub fn main() {
-  io.debug("<div>inside</div>")
+  let assert Ok(input) = read(from: "aloha.html")
+  input |> as_list |> find_div |> io.debug
+}
+
+type CurrentElementType {
+  Start
+  End
+  None
+}
+
+fn find_div(in: List(Element)) -> Element {
+  case in {
+    [] -> EmptyElement
+    [StartElement("div", [Attribute("class", "definition")], _) as result, ..] ->
+      result
+    [_, ..tail] -> find_div(tail)
+  }
 }
 
 pub type Element {
@@ -14,6 +31,7 @@ pub type Element {
     children: List(Element),
   )
   EndElement(name: String)
+  Content(String)
 }
 
 pub type Attribute {
@@ -23,7 +41,7 @@ pub type Attribute {
 pub fn get_first_element(in: String) -> #(Element, String) {
   in
   |> trim_space_to_elem_begin
-  |> do_get_first_element("", True)
+  |> do_get_first_element("", None)
 }
 
 fn trim_space_to_elem_begin(in: String) -> String {
@@ -38,24 +56,35 @@ fn trim_space_to_elem_begin(in: String) -> String {
 fn do_get_first_element(
   in: String,
   out: String,
-  start_element: Bool,
+  currently_parsing: CurrentElementType,
 ) -> #(Element, String) {
   case in {
-    "</" <> remain -> do_get_first_element(remain, out, False)
-    "<" <> remain -> do_get_first_element(remain, out, True)
-    ">" <> remain ->
-      case start_element {
-        True -> #(StartElement(out, [], []), remain)
-        False -> #(EndElement(out), remain)
+    "</" <> remain ->
+      case out {
+        "" -> do_get_first_element(remain, out, End)
+        _ -> #(Content(out), "</" <> remain)
       }
-    " " <> remain | "\n" <> remain | "\t" <> remain if start_element -> {
+    "<" <> remain ->
+      case out {
+        "" -> do_get_first_element(remain, out, Start)
+        _ -> #(Content(out), "<" <> remain)
+      }
+    ">" <> remain ->
+      case currently_parsing {
+        Start -> #(StartElement(out, [], []), remain)
+        End -> #(EndElement(out), remain)
+        None -> #(Content(out), remain)
+      }
+    " " <> remain | "\n" <> remain | "\t" <> remain
+      if currently_parsing == Start
+    -> {
       let #(attrs, remain_after_attr) = get_attrs(remain)
       #(StartElement(out, attrs, []), remain_after_attr)
     }
     "" -> #(EmptyElement, "")
     _ -> {
       let assert Ok(#(head, remain)) = string.pop_grapheme(in)
-      do_get_first_element(remain, out <> head, start_element)
+      do_get_first_element(remain, out <> head, currently_parsing)
     }
   }
 }
