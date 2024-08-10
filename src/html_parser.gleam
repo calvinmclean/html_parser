@@ -1,36 +1,31 @@
 import gleam/list
 import gleam/string
 
-type CurrentElementType {
-  Start
-  End
-  None
-}
-
-fn find_div(in: List(Element)) -> Element {
-  case in {
-    [] -> EmptyElement
-    [StartElement("div", [Attribute("class", "definition")], _) as result, ..] ->
-      result
-    [_, ..tail] -> find_div(tail)
-  }
-}
-
+/// Element is a part of an HTML document
 pub type Element {
   EmptyElement
+
+  /// StartElement is an opening tag like <div> and can have Attributes and child Elements
   StartElement(
     name: String,
     attributes: List(Attribute),
     children: List(Element),
   )
+
+  /// EndElement just has a name and signals the end of a block
   EndElement(name: String)
+
+  /// Content is non-HTML parts of the document in-between StartElement and
+  /// EndElement (the "hello" in `<div>hello</div>`)
   Content(String)
 }
 
+/// Attribute is an HTML attribute key-value pair
 pub type Attribute {
   Attribute(key: String, value: String)
 }
 
+/// get the first Element and remaining String
 pub fn get_first_element(in: String) -> #(Element, String) {
   in
   |> trim_space_to_elem_begin
@@ -44,6 +39,13 @@ fn trim_space_to_elem_begin(in: String) -> String {
     "<" <> remain -> "<" <> remain
     _ -> in
   }
+}
+
+/// CurrentElementType is used to track the current parsing state in do_get_first_element
+type CurrentElementType {
+  Start
+  End
+  None
 }
 
 fn do_get_first_element(
@@ -82,6 +84,7 @@ fn do_get_first_element(
   }
 }
 
+/// get the attributes for a StartElement and remaining String
 pub fn get_attrs(in: String) -> #(List(Attribute), String) {
   in
   |> trim_space_to_elem_begin
@@ -138,6 +141,7 @@ fn remove_quotes(in: String) -> String {
   |> string.reverse
 }
 
+// create a list of Elements
 pub fn as_list(in: String) -> List(Element) {
   case in {
     "" -> []
@@ -148,13 +152,14 @@ pub fn as_list(in: String) -> List(Element) {
   }
 }
 
+// create a tree of Elements where each StartElement can have children
 pub fn as_tree(in: String) -> Element {
   let #(first, remain) = get_first_element(in)
   let #(result, _) = do_as_tree(remain, first)
   result
 }
 
-pub fn do_as_tree(in: String, current: Element) -> #(Element, String) {
+fn do_as_tree(in: String, current: Element) -> #(Element, String) {
   let #(next, remain) = get_first_element(in)
   let assert StartElement(cur_name, cur_attrs, cur_children) = current
   case next {
