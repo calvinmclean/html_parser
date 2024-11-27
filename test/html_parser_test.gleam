@@ -9,11 +9,15 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn find_span_tree(in: html_parser.Element) -> Option(html_parser.Element) {
+fn find_div_tree(in: html_parser.Element) -> Option(html_parser.Element) {
   case in {
-    html_parser.StartElement("span", _, _) -> Some(in)
+    html_parser.StartElement(
+      "div",
+      [html_parser.Attribute("class", "definition")],
+      _,
+    ) -> Some(in)
     html_parser.StartElement(_, _, children) -> {
-      let subs = list.map(children, find_span_tree)
+      let subs = list.map(children, find_div_tree)
       case list.find(subs, option.is_some) {
         Ok(res) -> {
           res
@@ -55,11 +59,17 @@ pub fn parse_aloha_list_test() {
 }
 
 pub fn parse_aloha_tree_test() {
-  let assert Ok(input) = read(from: "test/simple.html")
-  input
-  |> html_parser.as_tree
-  |> find_span_tree
-  |> should.equal(Some(html_parser.StartElement("span", [], [])))
+  let assert Ok(input) = read(from: "test/aloha.html")
+
+  let assert Some(div) =
+    input
+    |> html_parser.as_tree
+    |> find_div_tree
+
+  let assert html_parser.StartElement(name, attrs, _) = div
+
+  should.equal(name, "div")
+  should.equal(attrs, [html_parser.Attribute("class", "definition")])
 }
 
 pub fn get_first_element_test() {
