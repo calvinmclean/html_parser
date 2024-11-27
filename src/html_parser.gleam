@@ -160,20 +160,52 @@ pub fn as_tree(in: String) -> Element {
 }
 
 fn do_as_tree(in: String, current: Element) -> #(Element, String) {
-  let #(next, remain) = get_first_element(in)
-  let assert StartElement(cur_name, cur_attrs, cur_children) = current
-  case next {
-    EndElement(name) if name == cur_name -> #(
-      StartElement(cur_name, cur_attrs, cur_children |> list.reverse),
-      remain,
-    )
-    EndElement(_) -> do_as_tree(remain, current)
-    _ -> {
-      let #(child_tree, remain_after_child) = do_as_tree(remain, next)
-      do_as_tree(
-        remain_after_child,
-        StartElement(cur_name, cur_attrs, [child_tree, ..cur_children]),
-      )
+  case current {
+    Content(_) -> #(current, in)
+    StartElement(cur_name, cur_attrs, cur_children) -> {
+      case in {
+        // If there's no more input and we're processing a StartElement,
+        // we should treat it as self-closing
+        "" -> #(
+          StartElement(cur_name, cur_attrs, cur_children |> list.reverse),
+          "",
+        )
+        _ -> {
+          let #(next, remain) = get_first_element(in)
+          case next {
+            EndElement(name) if name == cur_name -> #(
+              StartElement(cur_name, cur_attrs, cur_children |> list.reverse),
+              remain,
+            )
+            EndElement(_) -> do_as_tree(remain, current)
+            EmptyElement ->
+              case remain {
+                // Don't process empty elements with no remaining input
+                "" -> #(
+                  StartElement(
+                    cur_name,
+                    cur_attrs,
+                    cur_children |> list.reverse,
+                  ),
+                  "",
+                )
+                _ ->
+                  do_as_tree(
+                    remain,
+                    StartElement(cur_name, cur_attrs, [next, ..cur_children]),
+                  )
+              }
+            _ -> {
+              let #(child_tree, remain_after_child) = do_as_tree(remain, next)
+              do_as_tree(
+                remain_after_child,
+                StartElement(cur_name, cur_attrs, [child_tree, ..cur_children]),
+              )
+            }
+          }
+        }
+      }
     }
+    _ -> #(current, in)
   }
 }
