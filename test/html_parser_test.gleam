@@ -1,4 +1,5 @@
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleeunit
 import gleeunit/should
 import html_parser
@@ -8,7 +9,23 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn find_div(in: List(html_parser.Element)) -> html_parser.Element {
+fn find_span_tree(in: html_parser.Element) -> Option(html_parser.Element) {
+  case in {
+    html_parser.StartElement("span", _, _) -> Some(in)
+    html_parser.StartElement(_, _, children) -> {
+      let subs = list.map(children, find_span_tree)
+      case list.find(subs, option.is_some) {
+        Ok(res) -> {
+          res
+        }
+        Error(_) -> None
+      }
+    }
+    _ -> None
+  }
+}
+
+fn find_div_list(in: List(html_parser.Element)) -> html_parser.Element {
   case in {
     [] -> html_parser.EmptyElement
     [
@@ -19,15 +36,15 @@ fn find_div(in: List(html_parser.Element)) -> html_parser.Element {
       ) as result,
       ..
     ] -> result
-    [_, ..tail] -> find_div(tail)
+    [_, ..tail] -> find_div_list(tail)
   }
 }
 
-pub fn parse_aloha_test() {
+pub fn parse_aloha_list_test() {
   let assert Ok(input) = read(from: "test/aloha.html")
   input
   |> html_parser.as_list
-  |> find_div
+  |> find_div_list
   |> should.equal(
     html_parser.StartElement(
       "div",
@@ -35,6 +52,14 @@ pub fn parse_aloha_test() {
       [],
     ),
   )
+}
+
+pub fn parse_aloha_tree_test() {
+  let assert Ok(input) = read(from: "test/simple.html")
+  input
+  |> html_parser.as_tree
+  |> find_span_tree
+  |> should.equal(Some(html_parser.StartElement("span", [], [])))
 }
 
 pub fn get_first_element_test() {
