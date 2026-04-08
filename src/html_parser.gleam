@@ -123,7 +123,8 @@ fn do_get_attrs(
       let #(attrs, remain_after_attr) = do_get_attrs(remain, "", "", ReadingKey)
       #([Attribute(key, val), ..attrs], remain_after_attr)
     }
-    "=" <> remain -> do_get_attrs(remain, key, "", AfterEquals)
+    "=" <> remain if state == ReadingKey ->
+      do_get_attrs(remain, key, "", AfterEquals)
     "\"" <> remain if state == AfterEquals ->
       do_get_attrs(remain, key, val, ValueInsideQuotes)
     "\"" <> remain if state == ValueInsideQuotes ->

@@ -126,6 +126,18 @@ pub fn get_first_element_test() {
       ),
       "",
     )),
+    #(
+      "a with href with query parameter",
+      "<a href=\"https://website.com/?lang=en\">",
+      #(
+        html_parser.StartElement(
+          "a",
+          [html_parser.Attribute("href", "https://website.com/?lang=en")],
+          [],
+        ),
+        "",
+      ),
+    ),
   ]
 
   list.each(tests, fn(testcase) {
