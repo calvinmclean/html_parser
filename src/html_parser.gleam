@@ -84,61 +84,59 @@ fn do_get_first_element(
   }
 }
 
+type AttrState {
+  ReadingKey
+  AfterEquals
+  ValueInsideQuotes
+  AfterValue
+}
+
 /// get the attributes for a StartElement and remaining String
 pub fn get_attrs(in: String) -> #(List(Attribute), String) {
   in
   |> trim_space_to_elem_begin
-  |> do_get_attrs("", "", False)
+  |> do_get_attrs("", "", ReadingKey)
 }
 
 fn do_get_attrs(
   in: String,
   key: String,
   val: String,
-  finding_value: Bool,
+  state: AttrState,
 ) -> #(List(Attribute), String) {
   case in {
     "" | ">" ->
       case key, val {
         "", "" -> #([], "")
         _, "" -> #([], key)
-        _, _ -> #([Attribute(key, remove_quotes(val))], "")
+        _, _ -> #([Attribute(key, val)], "")
       }
     ">" <> remain ->
       case key, val {
         "", "" -> #([], remain)
-        _, _ -> #([Attribute(key, remove_quotes(val))], remain)
+        _, _ -> #([Attribute(key, val)], remain)
       }
-    " " <> remain | "\n" <> remain | "\t" <> remain if !finding_value ->
-      do_get_attrs(remain, key, val, finding_value)
-    " " <> remain | "\n" <> remain | "\t" <> remain -> {
-      let #(attrs, remain_after_attr) = do_get_attrs(remain, "", "", False)
-      #([Attribute(key, remove_quotes(val)), ..attrs], remain_after_attr)
+    " " <> remain | "\n" <> remain | "\t" <> remain
+      if state == ReadingKey || state == AfterEquals
+    -> do_get_attrs(remain, key, val, state)
+    " " <> remain | "\n" <> remain | "\t" <> remain if state == AfterValue -> {
+      let #(attrs, remain_after_attr) = do_get_attrs(remain, "", "", ReadingKey)
+      #([Attribute(key, val), ..attrs], remain_after_attr)
     }
-    "=" <> remain -> do_get_attrs(remain, key, "", True)
+    "=" <> remain -> do_get_attrs(remain, key, "", AfterEquals)
+    "\"" <> remain if state == AfterEquals ->
+      do_get_attrs(remain, key, val, ValueInsideQuotes)
+    "\"" <> remain if state == ValueInsideQuotes ->
+      do_get_attrs(remain, key, val, AfterValue)
     _ -> {
       let assert Ok(#(head, remain)) = string.pop_grapheme(in)
-      case finding_value {
-        True -> do_get_attrs(remain, key, val <> head, finding_value)
-        False -> do_get_attrs(remain, key <> head, "", finding_value)
+      case state {
+        ReadingKey -> do_get_attrs(remain, key <> head, "", state)
+        AfterEquals | ValueInsideQuotes | AfterValue ->
+          do_get_attrs(remain, key, val <> head, state)
       }
     }
   }
-}
-
-fn remove_quotes(in: String) -> String {
-  let remove_first_quote = fn(str) {
-    case str {
-      "\"" <> remain -> remain
-      _ -> str
-    }
-  }
-
-  in
-  |> remove_first_quote
-  |> string.reverse
-  |> remove_first_quote
-  |> string.reverse
 }
 
 // create a list of Elements

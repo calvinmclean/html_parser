@@ -118,6 +118,14 @@ pub fn get_first_element_test() {
       ),
       "",
     )),
+    #("div with space in attribute", "<div a=\"two words\">", #(
+      html_parser.StartElement(
+        "div",
+        [html_parser.Attribute("a", "two words")],
+        [],
+      ),
+      "",
+    )),
   ]
 
   list.each(tests, fn(testcase) {
