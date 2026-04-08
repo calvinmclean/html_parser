@@ -118,6 +118,26 @@ pub fn get_first_element_test() {
       ),
       "",
     )),
+    #("div with space in attribute", "<div a=\"two words\">", #(
+      html_parser.StartElement(
+        "div",
+        [html_parser.Attribute("a", "two words")],
+        [],
+      ),
+      "",
+    )),
+    #(
+      "a with href with query parameter",
+      "<a href=\"https://website.com/?lang=en\">",
+      #(
+        html_parser.StartElement(
+          "a",
+          [html_parser.Attribute("href", "https://website.com/?lang=en")],
+          [],
+        ),
+        "",
+      ),
+    ),
   ]
 
   list.each(tests, fn(testcase) {
